@@ -36,6 +36,8 @@ export class Bot extends Client {
     private db: MongoDatabase;
     private watcherSubscription: Subscription | null = null;
     private dailyResetHourUtc = 10; // 10 AM
+    private updateActivityTimeout: NodeJS.Timeout | null = null;
+    private updateActivityDelay = 5000;
 
     public constructor(db: MongoDatabase, watcher: ServerStatusWatcher) {
         super({
@@ -165,18 +167,19 @@ export class Bot extends Client {
         });
     }
 
-    private handleResetCommand(interaction: CommandInteraction) {
+    private getMillisecondsToReset(): number {
         const reset = new Date();
-
         if (reset.getUTCHours() < this.dailyResetHourUtc) {
             reset.setUTCHours(this.dailyResetHourUtc, 0, 0, 0)
         } else {
             reset.setDate(reset.getDate() + 1)
             reset.setUTCHours(this.dailyResetHourUtc, 0, 0, 0)
         }
+        return reset.getTime() - new Date().getTime()
+    }
 
-        const remainingTime = humanizeDuration(reset.getTime() - new Date().getTime(), { conjunction: ' and ', round: true })
-
+    private handleResetCommand(interaction: CommandInteraction) {
+        const remainingTime = humanizeDuration(this.getMillisecondsToReset(), { conjunction: ' and ', round: true })
         const description = `Daily reset is in ${remainingTime} (10 AM UTC)`
         return interaction.reply({
             embeds: [new MessageEmbed({ description })],
@@ -267,6 +270,20 @@ export class Bot extends Client {
 
     private async onReady() {
         console.log(`Logged in as '${this.user?.username}#${this.user?.discriminator}'`);
+        this.updateActivity();
+    }
+
+    private updateActivity() {
+        const duration = humanizeDuration(this.getMillisecondsToReset(), {
+            largest: 1,
+            round: true,
+            units: ['h', 'm', 's']
+        });
+        this.user?.setActivity({
+            name: `reset in ${duration}`
+        })
+
+        setTimeout(this.updateActivity.bind(this), this.updateActivityDelay)
     }
 
     public async teardown() {
@@ -336,5 +353,10 @@ export class Bot extends Client {
         super.destroy();
         this.watcherSubscription?.unsubscribe();
         this.watcherSubscription = null;
+
+        if (this.updateActivityTimeout) {
+            clearTimeout(this.updateActivityTimeout);
+            this.updateActivityTimeout = null;
+        }
     }
 }
