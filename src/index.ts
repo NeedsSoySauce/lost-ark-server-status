@@ -7,7 +7,7 @@ import { MongoDatabase } from './database.js';
 import { getEnvironmentVariable } from './util.js';
 
 const app = express();
-const port = getEnvironmentVariable('LOST_ARK_API_PORT');
+const port = getEnvironmentVariable('LOST_ARK_LOST_ARK_API_PORT');
 
 const rateLimiter = rateLimit({
     standardHeaders: true,
@@ -23,19 +23,19 @@ app.get('/server-status', async (req, res) => {
 app.listen(port, async () => {
     console.log(`Listening on port ${port}`);
 
-    const watcher = new ServerStatusWatcher(getEnvironmentVariable('LOST_ARK_API_ORIGIN'));
+    const watcher = new ServerStatusWatcher(getEnvironmentVariable('LOST_ARK_LOST_ARK_API_ORIGIN'));
     watcher.start();
 
-    const db = new MongoDatabase(getEnvironmentVariable('MONGODB_URI'));
+    const db = new MongoDatabase(getEnvironmentVariable('LOST_ARK_MONGODB_URI'));
     await db.start();
 
     const bot = new Bot(db, watcher);
-    await bot.login(getEnvironmentVariable('DISCORD_TOKEN'));
+    await bot.login(getEnvironmentVariable('LOST_ARK_DISCORD_TOKEN'));
 
     // await bot.deploy({
-    //     applicationId: getEnvironmentVariable('DISCORD_APPLICATION_ID'),
-    //     guildId: getEnvironmentVariable('DISCORD_GUILD_ID'),
-    //     token: getEnvironmentVariable('DISCORD_TOKEN'),
+    //     applicationId: getEnvironmentVariable('LOST_ARK_DISCORD_APPLICATION_ID'),
+    //     guildId: getEnvironmentVariable('LOST_ARK_DISCORD_GUILD_ID'),
+    //     token: getEnvironmentVariable('LOST_ARK_DISCORD_TOKEN'),
     // });
 
     // await bot.teardown();

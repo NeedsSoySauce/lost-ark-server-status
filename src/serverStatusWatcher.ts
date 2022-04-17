@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import { v4 as uuidv4 } from 'uuid';
-import { Server, ServerStatus } from './api.js';
+import { Server } from './api.js';
 import { LostArkServerName } from './constants.js';
 import { Subscription } from './subscription.js';
 
