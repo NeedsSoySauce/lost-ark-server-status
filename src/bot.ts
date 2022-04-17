@@ -177,7 +177,7 @@ export class Bot extends Client {
         const userId = interaction.user.id;
         const watch = await this.db.getWatchByUserId(userId);
 
-        const description = watch
+        const description = watch?.servers.length
             ? `You are currently setup to be notified when one of the following servers changes it's maintenance status:\n\n${watch.servers
                   .sort((a, b) => a.localeCompare(b))
                   .map((s) => ` • ${s}`)
