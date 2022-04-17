@@ -196,8 +196,6 @@ export class Bot extends Client {
         const watch = new Watch(userId, [serverName]);
         const region = interaction.options.getSubcommand();
 
-        console.log(region);
-
         await this.db.addOrUpdateWatch(watch);
 
         const description = `You will be notified when ${serverName} goes into or out of maintenance.
