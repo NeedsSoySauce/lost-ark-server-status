@@ -3,11 +3,12 @@ import {
     inlineCode,
     SlashCommandBuilder,
     SlashCommandStringOption,
-    SlashCommandSubcommandBuilder,
+    SlashCommandSubcommandBuilder
 } from '@discordjs/builders';
 import { REST } from '@discordjs/rest';
 import { Routes } from 'discord-api-types/v10';
 import { Client, Collection, CommandInteraction, Intents, MessageEmbed } from 'discord.js';
+import humanizeDuration from 'humanize-duration';
 import { EOL } from 'os';
 import { Server, ServerStatus } from './api.js';
 import { LostArkServerName, LOST_ARK_REGIONS, LOST_ARK_SERVERS } from './constants.js';
@@ -34,6 +35,7 @@ export class Bot extends Client {
     private commands: Map<string, BotCommand> = new Map();
     private db: MongoDatabase;
     private watcherSubscription: Subscription | null = null;
+    private dailyResetHourUtc = 10; // 10 AM
 
     public constructor(db: MongoDatabase, watcher: ServerStatusWatcher) {
         super({
@@ -113,6 +115,12 @@ export class Bot extends Client {
                     .setDescription('List servers you are currently subscribed to'),
                 handler: this.handleWatchesCommand.bind(this),
             },
+            {
+                builder: new SlashCommandBuilder()
+                    .setName('reset')
+                    .setDescription('Print time until daily reset'),
+                handler: this.handleResetCommand.bind(this),
+            },
         ]);
 
         this.once('ready', this.onReady.bind(this));
@@ -155,6 +163,25 @@ export class Bot extends Client {
                 });
             });
         });
+    }
+
+    private handleResetCommand(interaction: CommandInteraction) {
+        const reset = new Date();
+
+        if (reset.getUTCHours() < this.dailyResetHourUtc) {
+            reset.setUTCHours(this.dailyResetHourUtc, 0, 0, 0)
+        } else {
+            reset.setDate(reset.getDate() + 1)
+            reset.setUTCHours(this.dailyResetHourUtc, 0, 0, 0)
+        }
+
+        const remainingTime = humanizeDuration(reset.getTime() - new Date().getTime(), { conjunction: ' and ', round: true })
+
+        const description = `Daily reset is in ${remainingTime} (10 AM UTC)`
+        return interaction.reply({
+            embeds: [new MessageEmbed({ description })],
+            ephemeral: true
+        })
     }
 
     private handleDebugCommand(interaction: CommandInteraction) {
