@@ -1,7 +1,9 @@
 {
     "root": true,
     "parser": "@typescript-eslint/parser",
-    "plugins": ["@typescript-eslint"],
+    "plugins": [
+        "@typescript-eslint"
+    ],
     "extends": [
         "airbnb",
         "airbnb-typescript",
@@ -14,7 +16,16 @@
         "project": "./tsconfig.json"
     },
     "rules": {
-        "multiline-comment-style": ["error", "starred-block"],
-        "no-trailing-spaces": "error"
+        "multiline-comment-style": "off",
+        "no-trailing-spaces": "error",
+        "class-methods-use-this": "off",
+        "import/prefer-default-export": "off",
+        "@typescript-eslint/lines-between-class-members": [
+            "error",
+            "always",
+            {
+                "exceptAfterSingleLine": true
+            }
+        ]
     }
 }

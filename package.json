@@ -13,13 +13,17 @@
     "prepare": "husky install",
     "update-latest": "ncu -u && npm install"
   },
+  "type": "module",
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/express": "^4.17.13",
+    "@types/jsdom": "^16.2.14",
+    "@types/uuid": "^8.3.4",
     "@typescript-eslint/eslint-plugin": "^5.18.0",
     "@typescript-eslint/parser": "^5.18.0",
+    "dotenv": "^16.0.0",
     "eslint": "^8.13.0",
     "eslint-config-airbnb": "^19.0.4",
     "eslint-config-airbnb-typescript": "^17.0.0",
@@ -39,6 +43,18 @@
     ],
     "ext": ".ts,.js",
     "ignore": [],
-    "exec": "npx ts-node ./src/index.ts"
+    "exec": "npx ts-node-esm -r dotenv/config ./src/index.ts"
+  },
+  "dependencies": {
+    "@discordjs/builders": "^0.12.0",
+    "@discordjs/rest": "^0.3.0",
+    "discord-api-types": "^0.31.1",
+    "discord.js": "^13.6.0",
+    "express": "^4.17.3",
+    "express-rate-limit": "^6.3.0",
+    "jsdom": "^19.0.0",
+    "mongodb": "^4.5.0",
+    "node-fetch": "^3.2.3",
+    "uuid": "^8.3.2"
   }
 }
