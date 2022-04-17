@@ -7,7 +7,7 @@ import { MongoDatabase } from './database.js';
 import { getEnvironmentVariable } from './util.js';
 
 const app = express();
-const port = getEnvironmentVariable('LOST_ARK_LOST_ARK_API_PORT');
+const port = getEnvironmentVariable('LOST_ARK_API_PORT');
 
 const rateLimiter = rateLimit({
     standardHeaders: true,
@@ -23,7 +23,7 @@ app.get('/server-status', async (req, res) => {
 app.listen(port, async () => {
     console.log(`Listening on port ${port}`);
 
-    const watcher = new ServerStatusWatcher(getEnvironmentVariable('LOST_ARK_LOST_ARK_API_ORIGIN'));
+    const watcher = new ServerStatusWatcher(getEnvironmentVariable('LOST_ARK_API_ORIGIN'));
     watcher.start();
 
     const db = new MongoDatabase(getEnvironmentVariable('LOST_ARK_MONGODB_URI'));
