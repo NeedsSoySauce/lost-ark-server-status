@@ -42,8 +42,16 @@ export class ServerStatusWatcher {
     }
 
     private async checkStatus() {
-        const response = await fetch(`${this.origin}/server-status`);
-        const servers = (await response.json()) as Server[];
+        let servers: Server[];
+        try {
+            const response = await fetch(`${this.origin}/server-status`);
+            servers = (await response.json()) as Server[];
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error(error)
+            this.timeout = setTimeout(() => this.checkStatus(), this.delay);
+            return;
+        }
 
         const changes: Change<Server>[] = servers
             .map((s) => {
