@@ -41,6 +41,14 @@ export class ServerStatusWatcher {
         if (this.timeout) clearTimeout(this.timeout);
     }
 
+    public setPreviousValue(serverName: LostArkServerName, server: Server) {
+        this.previousValues.set(serverName, server)
+    }
+
+    public getState() {
+        return Array.from(this.previousValues.values())
+    }
+
     private async checkStatus() {
         let servers: Server[];
         try {

@@ -1,10 +1,10 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import humanizeDuration from 'humanize-duration'
-import { getServers } from './api.js';
-import { ServerStatusWatcher } from './serverStatusWatcher.js';
+import { getServers, ServerStatus } from './api.js';
 import { Bot } from './bot.js';
+import { LOST_ARK_SERVERS } from './constants.js';
 import { MongoDatabase } from './database.js';
+import { ServerStatusWatcher } from './serverStatusWatcher.js';
 import { getEnvironmentVariable } from './util.js';
 
 const app = express();
@@ -15,22 +15,33 @@ const rateLimiter = rateLimit({
     max: 20,
 });
 
+const watcher = new ServerStatusWatcher(getEnvironmentVariable('LOST_ARK_API_ORIGIN'));
+const db = new MongoDatabase(getEnvironmentVariable('LOST_ARK_MONGODB_URI'));
+const bot = new Bot(db, watcher);
+
 app.use(rateLimiter);
+
+app.post('/server-status', async (req, res) => {
+    // For testing to force maintenance status
+    LOST_ARK_SERVERS.forEach(server => {
+        watcher.setPreviousValue(server.name, {
+            ...server,
+            status: ServerStatus.Maintenance
+        })
+    })
+    res.json(watcher.getState())
+});
 
 app.get('/server-status', async (req, res) => {
     res.json(await getServers());
 });
 
 app.listen(port, async () => {
+    // eslint-disable-next-line no-console
     console.log(`Listening on port ${port}`);
 
-    const watcher = new ServerStatusWatcher(getEnvironmentVariable('LOST_ARK_API_ORIGIN'));
-    watcher.start();
-
-    const db = new MongoDatabase(getEnvironmentVariable('LOST_ARK_MONGODB_URI'));
+    watcher.start()
     await db.start();
-
-    const bot = new Bot(db, watcher);
     await bot.login(getEnvironmentVariable('LOST_ARK_DISCORD_TOKEN'));
 
     // await bot.deploy({
