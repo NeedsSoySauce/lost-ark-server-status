@@ -42,42 +42,56 @@ const parseServer = (element: HTMLElement, region: string): Server => {
 };
 
 export const getServers = async (): Promise<Server[]> => {
-    const result = await fetch(url);
-    const text = await result.text();
-    const jsdom = new JSDOM(text);
+    try {
+        const result = await fetch(url);
+        const text = await result.text();
+        const jsdom = new JSDOM(text);
 
-    const tabHeadings = jsdom.window.document.querySelectorAll<HTMLElement>(
-        '.ags-ServerStatus-content-tabs .ags-ServerStatus-content-tabs-tabHeading',
-    );
+        const tabHeadings = jsdom.window.document.querySelectorAll<HTMLElement>(
+            '.ags-ServerStatus-content-tabs .ags-ServerStatus-content-tabs-tabHeading',
+        );
 
-    const regions = Array.from(tabHeadings.values()).map((node) => {
-        const { index } = node.dataset;
-        const name = node.querySelector('.ags-ServerStatus-content-tabs-tabHeading-label')?.textContent?.trim();
-        if (!name || !index) throw new Error('Failed to parse region');
-        return {
-            index,
-            name,
-        };
-    });
-
-    const regionMap = Object.fromEntries(regions.map((s) => [s.index, s.name]));
-
-    const tabs = jsdom.window.document.querySelectorAll<HTMLElement>('.ags-ServerStatus-content-responses-response');
-
-    const servers: Server[] = Array.from(tabs.values())
-        .flatMap((node) => {
+        const regions = Array.from(tabHeadings.values()).map((node) => {
             const { index } = node.dataset;
-            const responses = node.querySelectorAll<HTMLElement>('.ags-ServerStatus-content-responses-response-server');
+            const name = node.querySelector('.ags-ServerStatus-content-tabs-tabHeading-label')?.textContent?.trim();
+            if (!name || !index) throw new Error('Failed to parse region');
+            return {
+                index,
+                name,
+            };
+        });
 
-            if (!index) throw new Error('Failed to parse server list');
+        const regionMap = Object.fromEntries(regions.map((s) => [s.index, s.name]));
 
-            const regionName = regionMap[index];
+        const tabs = jsdom.window.document.querySelectorAll<HTMLElement>('.ags-ServerStatus-content-responses-response');
 
-            if (!regionName) throw new Error('Failed to parse region name');
+        const servers: Server[] = Array.from(tabs.values())
+            .flatMap((node) => {
+                try {
+                    const { index } = node.dataset;
+                    const responses = node.querySelectorAll<HTMLElement>('.ags-ServerStatus-content-responses-response-server');
 
-            return Array.from(responses.values()).map((s) => parseServer(s, regionName));
-        })
-        .filter((s) => s !== null) as Server[];
+                    if (!index) throw new Error('Failed to parse server list');
 
-    return servers;
+                    const regionName = regionMap[index];
+
+                    if (!regionName) throw new Error('Failed to parse region name');
+
+                    return Array.from(responses.values()).map((s) => {
+                        try {
+                            return parseServer(s, regionName)
+                        } catch (e) {
+                            return null;
+                        }
+                    });
+                } catch (e) {
+                    return [];
+                }
+            })
+            .filter((s) => s !== null) as Server[];
+
+        return servers;
+    } catch (error) {
+        return [];
+    }
 };
