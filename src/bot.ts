@@ -31,6 +31,12 @@ interface BotCommand {
     builder: SlashCommandBuilder;
 }
 
+export interface BotConstructorParameters {
+    db: MongoDatabase;
+    watcher: ServerStatusWatcher;
+    dryRun?: boolean;
+}
+
 export class Bot extends Client {
     private commands: Map<string, BotCommand> = new Map();
     private db: MongoDatabase;
@@ -38,8 +44,9 @@ export class Bot extends Client {
     private dailyResetHourUtc = 10; // 10 AM
     private updateActivityTimeout: NodeJS.Timeout | null = null;
     private updateActivityDelay = 5000;
+    private dryRun = false;
 
-    public constructor(db: MongoDatabase, watcher: ServerStatusWatcher) {
+    public constructor(params: BotConstructorParameters) {
         super({
             intents: [
                 Intents.FLAGS.GUILDS,
@@ -50,9 +57,11 @@ export class Bot extends Client {
             ],
             partials: ['CHANNEL'],
         });
+        const { db, watcher, dryRun } = params;
 
         this.db = db;
         this.watcherSubscription = watcher.subscribe(this.handleChanges.bind(this));
+        this.dryRun = dryRun ?? false;;
 
         const watchCommandBuilder = new SlashCommandBuilder()
             .setName('watch')
@@ -142,29 +151,29 @@ export class Bot extends Client {
         const serversInMaintenance = changes
             .filter((s) => s.currentValue.status === ServerStatus.Maintenance)
             .map((s) => s.currentValue.name);
-        const serversNotInMaintenance = changes
-            .filter((s) => s.currentValue.status !== ServerStatus.Maintenance)
+        const serversPreviouslyInMaintenance = changes
+            .filter((s) => s.previousValue?.status === ServerStatus.Maintenance)
             .map((s) => s.currentValue.name);
 
-        serversInMaintenance.forEach(async (server) => {
-            const userIds = await this.db.getUsersWatchingServer(server);
-            userIds.forEach(async (id) => {
-                const user = await this.users.fetch(id);
-                await user.send({
-                    embeds: [new MessageEmbed({ description: `${server} is now under maintenance` })],
-                });
-            });
-        });
+        serversInMaintenance.forEach((s) => this.notifyUsersWatchingServer(s, `${s} is now under maintenance`));
+        serversPreviouslyInMaintenance.forEach((s) => this.notifyUsersWatchingServer(s, `${s} is no longer under maintenance`));
+    }
 
-        serversNotInMaintenance.forEach(async (server) => {
-            const userIds = await this.db.getUsersWatchingServer(server);
-            userIds.forEach(async (id) => {
+    private async notifyUsersWatchingServer(serverName: LostArkServerName, message: string) {
+        const userIds = await this.db.getUsersWatchingServer(serverName);
+        await Promise.allSettled(
+            userIds.map(async (id) => {
                 const user = await this.users.fetch(id);
-                await user.send({
-                    embeds: [new MessageEmbed({ description: `${server} is no longer under maintenance` })],
+
+                if (this.dryRun) {
+                    console.log({ serverName, userId: id, message })
+                    return Promise.resolve();
+                }
+
+                return user.send({
+                    embeds: [new MessageEmbed({ description: message })],
                 });
-            });
-        });
+            }))
     }
 
     private getMillisecondsToReset(): number {
@@ -209,9 +218,9 @@ export class Bot extends Client {
 
         const description = watch?.servers.length
             ? `You are currently setup to be notified when one of the following servers changes it's maintenance status:\n\n${watch.servers
-                  .sort((a, b) => a.localeCompare(b))
-                  .map((s) => ` • ${s}`)
-                  .join('\n')}`
+                .sort((a, b) => a.localeCompare(b))
+                .map((s) => ` • ${s}`)
+                .join('\n')}`
             : `You haven't created any watches. Use ${inlineCode('/watch')} to create one.`;
 
         await interaction.reply({
@@ -308,8 +317,7 @@ export class Bot extends Client {
         );
 
         console.log(
-            `Deleted ${
-                deleteApplicationCommandResults.filter((s) => s.status === 'fulfilled').length
+            `Deleted ${deleteApplicationCommandResults.filter((s) => s.status === 'fulfilled').length
             } application command(s)`,
         );
 
@@ -318,8 +326,7 @@ export class Bot extends Client {
         );
 
         console.log(
-            `Deleted ${
-                deleteApplicationGuildCommandResults.filter((s) => s.status === 'fulfilled').length
+            `Deleted ${deleteApplicationGuildCommandResults.filter((s) => s.status === 'fulfilled').length
             } application guild command(s)`,
         );
     }

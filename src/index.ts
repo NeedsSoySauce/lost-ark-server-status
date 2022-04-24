@@ -17,7 +17,7 @@ const rateLimiter = rateLimit({
 
 const watcher = new ServerStatusWatcher(getEnvironmentVariable('LOST_ARK_API_ORIGIN'));
 const db = new MongoDatabase(getEnvironmentVariable('LOST_ARK_MONGODB_URI'));
-const bot = new Bot(db, watcher);
+const bot = new Bot({ db, watcher });
 
 app.use(rateLimiter);
 
