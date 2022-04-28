@@ -5,7 +5,7 @@ import { Bot } from './bot.js';
 import { LOST_ARK_SERVERS } from './constants.js';
 import { MongoDatabase } from './database.js';
 import { ServerStatusWatcher } from './serverStatusWatcher.js';
-import { getEnvironmentVariable } from './util.js';
+import { getEnvironmentVariable, getNumberEnvironmentVariable } from './util.js';
 
 const app = express();
 const port = getEnvironmentVariable('LOST_ARK_API_PORT');
@@ -15,7 +15,10 @@ const rateLimiter = rateLimit({
     max: 20,
 });
 
-const watcher = new ServerStatusWatcher(getEnvironmentVariable('LOST_ARK_API_ORIGIN'));
+const watcher = new ServerStatusWatcher(
+    getEnvironmentVariable('LOST_ARK_API_ORIGIN'),
+    getNumberEnvironmentVariable('LOST_ARK_WATCHER_DELAY')
+);
 const db = new MongoDatabase(getEnvironmentVariable('LOST_ARK_MONGODB_URI'));
 const bot = new Bot({ db, watcher });
 

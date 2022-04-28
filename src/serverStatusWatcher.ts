@@ -13,14 +13,15 @@ export interface Change<T> {
 
 export class ServerStatusWatcher {
     private origin;
-    private delay = 5000;
+    private delay: number;
     private timeout: NodeJS.Timeout | null = null;
     private subscribers: Map<string, ChangeCallback> = new Map();
     private previousValues: Map<LostArkServerName, Server> = new Map();
     private isRunning = false;
 
-    public constructor(origin: string) {
+    public constructor(origin: string, delay: number | null = null) {
         this.origin = origin;
+        this.delay = delay ?? 60000; // 60 seconds
     }
 
     public subscribe(callback: ChangeCallback): Subscription {
